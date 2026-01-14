@@ -145,8 +145,6 @@ export PKG_CONFIG_PATH="$BUILD_DIR/.apt/usr/lib/x86_64-linux-gnu/pkgconfig:$BUIL
 
 # borrowed from heroku-geo-buildpack
 
-PROFILE_PATH="$BUILD_DIR/.profile.d/000_apt.sh"
-
 # Export vars
 # shellcheck disable=SC2016
 {
@@ -154,12 +152,12 @@ PROFILE_PATH="$BUILD_DIR/.profile.d/000_apt.sh"
   echo 'export GEOS_LIBRARY_PATH="$HOME/.apt/usr/lib/x86_64-linux-gnu/libgeos_c.so.1"'
   echo 'export PROJ4_LIBRARY_PATH="$HOME/.apt/usr/lib/x86_64-linux-gnu/libproj.so.25"'
   echo 'export GDAL_DATA="$HOME/.apt/usr/share/gdal"'
-  echo 'export LIBRARY_PATH="$HOME/.apt/usr/lib:$HOME/.apt/usr/lib/x86_64-linux-gnu:$LIBRARY_PATH"'
-  echo 'export LD_LIBRARY_PATH="$HOME/.apt/usr/lib::$HOME/.apt/usr/lib/x86_64-linux-gnu/$LD_LIBRARY_PATH"'
-} >> "$PROFILE_PATH"
+} >> "$RUNTIME_PROFILE_SCRIPT"
 
+topic "Exporting environment"
+BUILDPACK_EXPORT_FILE="$BP_DIR/export"
 #give environment to later buildpacks
-export | grep -E -e ' (PATH|LD_LIBRARY_PATH|LIBRARY_PATH|INCLUDE_PATH|CPATH|CPPPATH|PKG_CONFIG_PATH)='  > "$BP_DIR/export"
+export | grep -E -e ' (PATH|LD_LIBRARY_PATH|LIBRARY_PATH|INCLUDE_PATH|CPATH|CPPPATH|PKG_CONFIG_PATH)='  > "$BUILDPACK_EXPORT_FILE"
 
 # Set environment variables for later buildpacks, so that the GDAL installation
 # can be found when pip installing GDAL, or by Django (eg during collectstatic).
@@ -171,9 +169,8 @@ export | grep -E -e ' (PATH|LD_LIBRARY_PATH|LIBRARY_PATH|INCLUDE_PATH|CPATH|CPPP
   echo "export CPLUS_INCLUDE_PATH=\"$BUILD_DIR/.apt/usr/include/gdal:\$CPLUS_INCLUDE_PATH\""
   echo "export C_INCLUDE_PATH=\"$BUILD_DIR/.apt/usr/include/gdal:\$C_INCLUDE_PATH\""
 } >> "$BP_DIR/export"
-topic "Exporting environment"
-BUILDPACK_EXPORT_FILE="$BP_DIR/export"
-export | grep -E -e ' (PATH|LD_LIBRARY_PATH|LIBRARY_PATH|INCLUDE_PATH|CPATH|CPPPATH|PKG_CONFIG_PATH)=' > "$BUILDPACK_EXPORT_FILE"
+
+# end geo-specific exports
 
 topic "Rewrite package-config files"
 find "$BUILD_DIR/.apt" -type f -ipath '*/pkgconfig/*.pc' -print0 | xargs -0 --no-run-if-empty -n 1 sed -i -e 's!^prefix=\(.*\)$!prefix='"$BUILD_DIR"'/.apt\1!g'
